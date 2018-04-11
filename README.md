@@ -1,8 +1,8 @@
 Typecho 评论邮件提醒插件
 =============
 访客评论后，将会发送评论内容到您指定的邮箱。
-原作者是  DEFE (http://defe.me)。
-个人原因不再维护，所以我在其最终版本1.2.6的基础上继续维护更新。
+原作者是 byends（https://github.com/byends/CommentToMail/） 基于 DEFE (http://defe.me) 维护的版本。
+基于作者 byends 的2.0.0版本进行维护。
 
 
 ### 使用说明
@@ -13,6 +13,10 @@ Typecho 评论邮件提醒插件
 5. 设置smtp服务器地址、邮箱地址、密码等信息
 
 ### 升级日志
+
+##### 2.0.1 Upgrade at 2018-04-11
+- 修改socket 和 curl 方式提交请求为POST方式
+- 优化curl方式对于SSL证书的验证
 
 ##### 2.0.0 Upgrade at 2014-04-25
 
