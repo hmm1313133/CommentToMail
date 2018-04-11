@@ -17,6 +17,7 @@ Typecho 评论邮件提醒插件
 ##### 2.0.1 Upgrade at 2018-04-11
 - 修改socket 和 curl 方式提交请求为POST方式
 - 优化curl方式对于SSL证书的验证
+- 更新PHPMailer邮件类至最新版
 
 ##### 2.0.0 Upgrade at 2014-04-25
 
