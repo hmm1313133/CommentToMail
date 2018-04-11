@@ -1,10 +1,14 @@
 Typecho 评论邮件提醒插件
 =============
 访客评论后，将会发送评论内容到您指定的邮箱。
-原作者是 byends（https://github.com/byends/CommentToMail/） 基于 DEFE (http://defe.me) 维护的版本。
+原作者是[byends](https://github.com/byends/CommentToMail/ "byends") 基于[DEFE](http://defe.me "DEFE")维护的版本。
+
+
+Github地址:https://github.com/hmm1313133/CommentToMail
+下载链接:[点击下载](https://github.com/hmm1313133/CommentToMail/archive/master.zip "点击下载")
 基于作者 byends 的2.0.0版本进行维护。
 
-
+如有bug请评论告知。
 ### 使用说明
 1. 下载插件
 2. 将插件上传到 `/usr/plugins/` 这个目录下
@@ -50,4 +54,3 @@ Typecho 评论邮件提醒插件
 - 修复评论时间  时错误的BUG
 - 邮件标题增加不能为空的校验
 - 整理代码格式，提高可读性
-
