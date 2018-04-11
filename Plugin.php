@@ -7,7 +7,7 @@
  * @version 2.0.1
  * @link https://www.temdu.com
  * @oriAuthor DEFE (http://defe.me)
- * 
+ *
  * 原版本是 Byends Upd（http://www.byends.com） 基于 DEFE (http://defe.me) 的修改,请尊重版权
  *
  */
@@ -15,13 +15,13 @@ class CommentToMail_Plugin implements Typecho_Plugin_Interface
 {
     /** @var string 提交路由前缀 */
     public static $action = 'comment-to-mail';
-    
+
     /** @var string 控制菜单链接 */
     public static $panel  = 'CommentToMail/page/console.php';
 
     /** @var bool 是否记录日志 */
     private static $_isMailLog  = false;
-    
+
     /** @var bool 请求适配器 */
     private static $_adapter    = false;
 
@@ -37,13 +37,14 @@ class CommentToMail_Plugin implements Typecho_Plugin_Interface
         if (false == self::isAvailable()) {
             throw new Typecho_Plugin_Exception(_t('对不起, 您的主机没有打开 allow_url_fopen 功能而且不支持 php-curl 扩展, 无法正常使用此功能'));
         }
-        
+
         if (false == self::isWritable(dirname(__FILE__) . '/cache/')) {
             throw new Typecho_Plugin_Exception(_t('对不起，插件目录不可写，无法正常使用此功能'));
         }
 
         Typecho_Plugin::factory('Widget_Feedback')->finishComment = array('CommentToMail_Plugin', 'parseComment');
         Typecho_Plugin::factory('Widget_Comments_Edit')->finishComment = array('CommentToMail_Plugin', 'parseComment');
+        Typecho_Plugin::factory('Widget_Service')->sendMail = array('CommentToMail_Plugin', 'asyncRequest');
         Helper::addAction(self::$action, 'CommentToMail_Action');
         Helper::addPanel(1, self::$panel, '评论邮件提醒', '评论邮件提醒控制台', 'administrator');
 
@@ -74,69 +75,69 @@ class CommentToMail_Plugin implements Typecho_Plugin_Interface
     public static function config(Typecho_Widget_Helper_Form $form)
     {
         $mode= new Typecho_Widget_Helper_Form_Element_Radio('mode',
-                array( 'smtp' => 'smtp',
-                       'mail' => 'mail()',
-                       'sendmail' => 'sendmail()'),
-                'smtp', '发信方式');
+            array( 'smtp' => 'smtp',
+                'mail' => 'mail()',
+                'sendmail' => 'sendmail()'),
+            'smtp', '发信方式');
         $form->addInput($mode);
 
         $host = new Typecho_Widget_Helper_Form_Element_Text('host', NULL, 'smtp.',
-                _t('SMTP地址'), _t('请填写 SMTP 服务器地址'));
+            _t('SMTP地址'), _t('请填写 SMTP 服务器地址'));
         $form->addInput($host->addRule('required', _t('必须填写一个SMTP服务器地址')));
 
         $port = new Typecho_Widget_Helper_Form_Element_Text('port', NULL, '25',
-                _t('SMTP端口'), _t('SMTP服务端口,一般为25。'));
+            _t('SMTP端口'), _t('SMTP服务端口,一般为25。'));
         $port->input->setAttribute('class', 'mini');
         $form->addInput($port->addRule('required', _t('必须填写SMTP服务端口'))
-                ->addRule('isInteger', _t('端口号必须是纯数字')));
+            ->addRule('isInteger', _t('端口号必须是纯数字')));
 
         $user = new Typecho_Widget_Helper_Form_Element_Text('user', NULL, NULL,
-                _t('SMTP用户'),_t('SMTP服务验证用户名,一般为邮箱名如：youname@domain.com'));
+            _t('SMTP用户'),_t('SMTP服务验证用户名,一般为邮箱名如：youname@domain.com'));
         $form->addInput($user->addRule('required', _t('SMTP服务验证用户名')));
 
         $pass = new Typecho_Widget_Helper_Form_Element_Password('pass', NULL, NULL,
-                _t('SMTP密码'));
+            _t('SMTP密码'));
         $form->addInput($pass->addRule('required', _t('SMTP服务验证密码')));
 
         $validate = new Typecho_Widget_Helper_Form_Element_Checkbox('validate',
-                array('validate'=>'服务器需要验证',
-                    'ssl'=>'ssl加密'),
-                array('validate'),'SMTP验证');
+            array('validate'=>'服务器需要验证',
+                'ssl'=>'ssl加密'),
+            array('validate'),'SMTP验证');
         $form->addInput($validate);
-        
+
         $fromName = new Typecho_Widget_Helper_Form_Element_Text('fromName', NULL, NULL,
-                _t('发件人名称'),_t('发件人名称，留空则使用博客标题'));
+            _t('发件人名称'),_t('发件人名称，留空则使用博客标题'));
         $form->addInput($fromName);
 
         $mail = new Typecho_Widget_Helper_Form_Element_Text('mail', NULL, NULL,
-                _t('接收邮件的地址'),_t('接收邮件的地址,如为空则使用文章作者个人设置中的邮件地址！'));
+            _t('接收邮件的地址'),_t('接收邮件的地址,如为空则使用文章作者个人设置中的邮件地址！'));
         $form->addInput($mail->addRule('email', _t('请填写正确的邮件地址！')));
 
         $contactme = new Typecho_Widget_Helper_Form_Element_Text('contactme', NULL, NULL,
-                _t('模板中“联系我”的邮件地址'),_t('联系我用的邮件地址,如为空则使用文章作者个人设置中的邮件地址！'));
+            _t('模板中“联系我”的邮件地址'),_t('联系我用的邮件地址,如为空则使用文章作者个人设置中的邮件地址！'));
         $form->addInput($contactme->addRule('email', _t('请填写正确的邮件地址！')));
 
         $status = new Typecho_Widget_Helper_Form_Element_Checkbox('status',
-                array('approved' => '提醒已通过评论',
-                        'waiting' => '提醒待审核评论',
-                        'spam' => '提醒垃圾评论'),
-                array('approved', 'waiting'), '提醒设置',_t('该选项仅针对博主，访客只发送已通过的评论。'));
+            array('approved' => '提醒已通过评论',
+                'waiting' => '提醒待审核评论',
+                'spam' => '提醒垃圾评论'),
+            array('approved', 'waiting'), '提醒设置',_t('该选项仅针对博主，访客只发送已通过的评论。'));
         $form->addInput($status);
 
         $other = new Typecho_Widget_Helper_Form_Element_Checkbox('other',
-                array('to_owner' => '有评论及回复时，发邮件通知博主。',
-                    'to_guest' => '评论被回复时，发邮件通知评论者。',
-                    'to_me'=>'自己回复自己的评论时，发邮件通知。(同时针对博主和访客)',
-                    'to_log' => '记录邮件发送日志。'),
-                array('to_owner','to_guest'), '其他设置',_t('选中该选项插件会在log/mailer_log.txt 文件中记录发送日志。'));
+            array('to_owner' => '有评论及回复时，发邮件通知博主。',
+                'to_guest' => '评论被回复时，发邮件通知评论者。',
+                'to_me'=>'自己回复自己的评论时，发邮件通知。(同时针对博主和访客)',
+                'to_log' => '记录邮件发送日志。'),
+            array('to_owner','to_guest'), '其他设置',_t('选中该选项插件会在log/mailer_log.txt 文件中记录发送日志。'));
         $form->addInput($other->multiMode());
 
         $titleForOwner = new Typecho_Widget_Helper_Form_Element_Text('titleForOwner',null,"[{title}] 一文有新的评论",
-                _t('博主接收邮件标题'));
+            _t('博主接收邮件标题'));
         $form->addInput($titleForOwner->addRule('required', _t('博主接收邮件标题 不能为空')));
 
         $titleForGuest = new Typecho_Widget_Helper_Form_Element_Text('titleForGuest',null,"您在 [{title}] 的评论有了回复",
-                _t('访客接收邮件标题'));
+            _t('访客接收邮件标题'));
         $form->addInput($titleForGuest->addRule('required', _t('访客接收邮件标题 不能为空')));
     }
 
@@ -158,7 +159,7 @@ class CommentToMail_Plugin implements Typecho_Plugin_Interface
      * @return void
      */
     public static function parseComment($comment)
-    {        
+    {
         $options           = Typecho_Widget::widget('Widget_Options');
         $cfg = array(
             'siteTitle' => $options->title,
@@ -196,7 +197,7 @@ class CommentToMail_Plugin implements Typecho_Plugin_Interface
 
         $date = new Typecho_Date(Typecho_Date::gmtTime());
         $time = $date->format('Y-m-d H:i:s');
-        
+
         self::saveLog("{$time} 开始发送请求：{$url}\n");
         self::asyncRequest($url);
     }
@@ -275,9 +276,9 @@ class CommentToMail_Plugin implements Typecho_Plugin_Interface
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, TRUE);  // 从证书中检查SSL加密算法是否存在
         curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/536.11 (KHTML, like Gecko) Chrome/20.0.1132.47 Safari/536.11"); //设置浏览器标识
 
-        
+
         self::saveLog("Curl 方式发送\r\n");
-        
+
         self::saveLog("Curl:".curl_exec($ch)."\r\n");
 
         if($errno = curl_errno($ch)) {
@@ -344,3 +345,4 @@ class CommentToMail_Plugin implements Typecho_Plugin_Interface
         file_put_contents(dirname(__FILE__) . '/log/mailer_log.txt', $content, FILE_APPEND);
     }
 }
+
