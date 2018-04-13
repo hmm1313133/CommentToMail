@@ -23,7 +23,7 @@
 版本要求：需要 Typecho `1.2 (18.1.29)`
 注意：需禁用再重新激活插件
 - 添加Typecho开发版异步回调方法
-- Github地址:[点击转跳](https://github.com/hmm1313133/CommentToMail/tree/development "点击转跳")
+
 
 ##### 2.0.1 Upgrade at 2018-04-11
 - 修改socket 和 curl 方式提交请求为POST方式

@@ -1,12 +1,15 @@
 <?php
 /**
- * 评论邮件提醒插件,可以通过网址监控运行
+ * 评论邮件提醒插件,同时包括监控和异步方法
  *
  * @package CommentToMail
- * @author Uniartisan
- * @version 4.1.1
- * @link https://blog.zhiyuanyun.cc/archives/CommentToMail.html
- * latest dates 2017-12-21
+ * @author Hmm
+ * @version 2.1.0
+ * @link https://www.temdu.com
+ * latest dates 2018-04-13
+ *
+ * 基于Uniartisan维护版本添加异步发送方法同时感谢Byends（https://github.com/byends/CommentToMail/）和DEFE两位作者
+ *
  */
 class CommentToMail_Plugin implements Typecho_Plugin_Interface
 {
