@@ -256,7 +256,7 @@ class CommentToMail_Plugin implements Typecho_Plugin_Interface
         self::$_isMailLog = in_array('to_log', Helper::options()->plugin('CommentToMail')->other) ? true : false;
 
         // 添加至队列
-        self::saveLog("邮件添加至队列\r\n");
+        //self::saveLog("邮件添加至队列\r\n");
         $cfg      = (object)$cfg;
         $db = Typecho_Db::get();
         $prefix = $db->getPrefix();
@@ -269,7 +269,7 @@ class CommentToMail_Plugin implements Typecho_Plugin_Interface
 
         $_cfg = Helper::options()->plugin('CommentToMail');
         if($_cfg->sendmode=='asy'){
-            self::saveLog("开始执行异步请求\r\n");
+            //self::saveLog("开始执行异步请求\r\n");
             //http://jb.temdu.com/index.php/action/comment-to-mail?do=deliverMail&DzaDLpImgj1M07B6
             $url = ($options->rewrite) ? $options->siteUrl : $options->siteUrl . 'index.php';
             $url = rtrim($url, '/') .  '/action/' . self::$action . '?do=deliverMail&key=' .$_cfg->key;
@@ -314,7 +314,7 @@ class CommentToMail_Plugin implements Typecho_Plugin_Interface
         }
 
         if ($fp === false) {
-            self::saveLog("SOCKET错误," . $errno . ':' . $errstr);
+            //self::saveLog("SOCKET错误," . $errno . ':' . $errstr);
             self::curl($url);
             return false;
         }
@@ -323,12 +323,12 @@ class CommentToMail_Plugin implements Typecho_Plugin_Interface
         $out .= "Host: $host\r\n";
         $out .= "Connection: Close\r\n\r\n";
 
-        self::saveLog("Socket 方式发送\r\n");
-        self::saveLog("请求链接：$url\r\n");
+        //("Socket 方式发送\r\n");
+        //self::saveLog("请求链接：$url\r\n");
         fwrite($fp, $out);
         sleep(1);
         fclose($fp);
-        self::saveLog("请求结束\r\n");
+        //self::saveLog("请求结束\r\n");
     }
 
     /**
@@ -350,18 +350,17 @@ class CommentToMail_Plugin implements Typecho_Plugin_Interface
         curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/536.11 (KHTML, like Gecko) Chrome/20.0.1132.47 Safari/536.11"); //设置浏览器标识
 
 
-        self::saveLog("Curl 方式发送\r\n");
+        //self::saveLog("Curl 方式发送\r\n");
 
-        self::saveLog("Curl:".curl_exec($ch)."\r\n");
+        //self::saveLog("Curl:".curl_exec($ch)."\r\n");
 
         if($errno = curl_errno($ch)) {
             $error_message = curl_strerror($errno);
-            //echo "cURL error ({$errno}):\n {$error_message}";
-            self::saveLog("cURL error ({$errno}): {$error_message}\n");
+            //self::saveLog("cURL error ({$errno}): {$error_message}\n");
         }
         //self::saveLog("执行发送请求：{$url}\n");
         curl_close($ch);
-        self::saveLog("请求结束\r\n");
+        //self::saveLog("请求结束\r\n");
     }
 
     /**
