@@ -1,25 +1,12 @@
-<style>
-    .wrap span {
-        display: inline-block;
-    }
-    .w260{ width: 260px;}
-    .w20{ width: 20px;}
-    .wauto{ width: auto;}
-</style>
-<table style="width: 99.8%;height:99.8% "><tbody><tr><td style="background:#fafafa url(https://a.photo/images/2018/03/24/2017113018325846288465.png)">
-    <div style="border-radius: 10px 10px 10px 10px;font-size:13px;    color: #555555;width: 666px;font-family:'Century Gothic','Trebuchet MS','Hiragino Sans GB',微软雅黑,'Microsoft Yahei',Tahoma,Helvetica,Arial,'SimSun',sans-serif;margin:50px auto;border:1px solid #eee;max-width:100%;background: #ffffff repeating-linear-gradient(-45deg,#fff,#fff 1.125rem,transparent 1.125rem,transparent 2.25rem);box-shadow: 0 1px 5px rgba(0, 0, 0, 0.15);">
-        <div style="width:100%;background:#49BDAD;color:#ffffff;border-radius: 10px 10px 0 0;background-image: -moz-linear-gradient(0deg, rgb(67, 198, 184), rgb(255, 209, 244));background-image: -webkit-linear-gradient(0deg, rgb(67, 198, 184), rgb(255, 209, 244));height: 66px;">
-            <p style="font-size:15px;word-break:break-all;padding: 23px 32px;margin:0;background-color: hsla(0,0%,100%,.4);border-radius: 10px 10px 0 0;"><a style="text-decoration:none;color: #ffffff;" href="https://www.temdu.com/"> Temdu </a>上有新的评论啦！
-            </p>
-        </div>
-        <div style="margin:40px auto;width:90%">
-            <p>{author} 在您文章《{title}》上发表评论:</p>
-            <p style="background: #fafafa repeating-linear-gradient(-45deg,#fff,#fff 1.125rem,transparent 1.125rem,transparent 2.25rem);box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);margin:20px 0px;padding:15px;border-radius:5px;font-size:14px;color:#555555;">{text}</p>
-        
-            <p class="wrap" style="text-decoration:none"><span class="w260">时间：{time}</span><span class="w20"> </span><span class="wauto">IP：{ip}</span></p>
-            <p class="wrap" style="text-decoration:none"><span class="w260">邮箱：{mail}</span><span class="w20"> </span><span class="wauto">状态：{status}</span></p>
-            <p><a style="text-decoration:none; color:#12addb" href="{permalink}" target='_blank'>[查看评论]</a>&nbsp;|&nbsp;<a style="text-decoration:none; color:#12addb" href="{manage}" target='_blank'>[管理评论] </a></p>
-            <style type="text/css">a:link{text-decoration:none}a:visited{text-decoration:none}a:hover{text-decoration:none}a:active{text-decoration:none}</style>
-        </div>
-    </div>
-</td></tr></tbody></table>
+<div style="background-color:white;border-top:2px solid #12ADDB;box-shadow:0 1px 3px #AAAAAA;line-height:180%;padding:0 15px 12px;width:500px;margin:50px auto;color:#555555;font-family:'Century Gothic','Trebuchet MS','Hiragino Sans GB',微软雅黑,'Microsoft Yahei',Tahoma,Helvetica,Arial,'SimSun',sans-serif;font-size:12px;">  
+        <h2 style="border-bottom:1px solid #DDD;font-size:14px;font-weight:normal;padding:13px 0 10px 8px;"><span style="color: #12ADDB;font-weight: bold;">&gt; </span>({author})在<a style="text-decoration:none;color: #12ADDB;" href="{permalink}" target="_blank">《{title}》</a>创造了新的评论</h2>  
+        <div style="padding:0 12px 0 12px;margin-top:18px">  
+            <p>时间：<span style="border-bottom:1px dashed #ccc;" t="5" times=" 20:42">{time}</span></p>  
+            <p style="background-color: #f5f5f5;border: 0px solid #DDD;padding: 10px 15px;margin:18px 0">{text}</p>  
+            <p>评论者"{author}"邮箱为:</p>  
+            <p style="background-color: #f5f5f5;border: 0px solid #DDD;padding: 10px 15px;margin:18px 0"> <a href="mailto:{mail}" target="_blank">{mail}</a></p>
+            <p>评论者"{author}"其他信息:</p>  
+            <p style="background-color: #f5f5f5;border: 0px solid #DDD;padding: 10px 15px;margin:18px 0">IP：{ip}，状态：{status}，[<a href='{manage}' target='_blank'>管理评论</a>]</p>   
+            <p>您可以点击 <a style="text-decoration:none; color:#12addb" href="{permalink}" target="_blank">查看回复的完整內容 </a>，欢迎再次光临 <a style="text-decoration:none; color:#12addb" href="https://blog.zhiyuanyun.cc" target="_blank">{siteTitle}</a>。</p>  
+        </div>  
+    </div>

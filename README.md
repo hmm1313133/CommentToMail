@@ -14,6 +14,17 @@
 
 ### 升级日志
 
+##### 2.1.0(development) Upgrade at 2018-04-13
+版本要求：需要 Typecho `1.2 (18.1.29)`
+注意：需禁用再重新激活插件
+- 基于Uniartisan维护版本添加异步方法，实现网址监控+异步发送共存
+
+##### 2.0.1(development) Upgrade at 2018-04-11
+版本要求：需要 Typecho `1.2 (18.1.29)`
+注意：需禁用再重新激活插件
+- 添加Typecho开发版异步回调方法
+- Github地址:[点击转跳](https://github.com/hmm1313133/CommentToMail/tree/development "点击转跳")
+
 ##### 2.0.1 Upgrade at 2018-04-11
 - 修改socket 和 curl 方式提交请求为POST方式
 - 优化curl方式对于SSL证书的验证
