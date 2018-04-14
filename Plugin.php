@@ -6,7 +6,7 @@
  * @author Hmm
  * @version 2.1.1
  * @link https://www.temdu.com
- * latest dates 2018-04-14
+ * 
  *
  * 基于Uniartisan维护版本添加异步发送方法同时感谢Byends（https://github.com/byends/CommentToMail/）和DEFE两位作者
  *
