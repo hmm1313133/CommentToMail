@@ -1,21 +1,24 @@
 <?php
 /**
- * 评论邮件提醒插件
+ * 评论邮件提醒插件,同时包括监控和异步方法
  *
  * @package CommentToMail
  * @author Hmm
- * @version 2.0.1
+ * @version 2.1.1
  * @link https://www.temdu.com
- * @oriAuthor DEFE (http://defe.me)
  * 
- * 原版本是 Byends Upd（http://www.byends.com） 基于 DEFE (http://defe.me) 的修改,请尊重版权
+ *
+ * 基于Uniartisan维护版本添加异步发送方法同时感谢Byends（https://github.com/byends/CommentToMail/）和DEFE两位作者
  *
  */
 class CommentToMail_Plugin implements Typecho_Plugin_Interface
 {
     /** @var string 提交路由前缀 */
     public static $action = 'comment-to-mail';
-    
+
+    /** @var bool 内部请求User-Agent */
+    public static $ua = 'MailMessageBrid';
+
     /** @var string 控制菜单链接 */
     public static $panel  = 'CommentToMail/page/console.php';
 
@@ -37,16 +40,24 @@ class CommentToMail_Plugin implements Typecho_Plugin_Interface
         if (false == self::isAvailable()) {
             throw new Typecho_Plugin_Exception(_t('对不起, 您的主机没有打开 allow_url_fopen 功能而且不支持 php-curl 扩展, 无法正常使用此功能'));
         }
-        
+
         if (false == self::isWritable(dirname(__FILE__) . '/cache/')) {
             throw new Typecho_Plugin_Exception(_t('对不起，插件目录不可写，无法正常使用此功能'));
         }
 
+		self::dbInstall();
         Typecho_Plugin::factory('Widget_Feedback')->finishComment = array('CommentToMail_Plugin', 'parseComment');
         Typecho_Plugin::factory('Widget_Comments_Edit')->finishComment = array('CommentToMail_Plugin', 'parseComment');
-        Helper::addAction(self::$action, 'CommentToMail_Action');
-        Helper::addPanel(1, self::$panel, '评论邮件提醒', '评论邮件提醒控制台', 'administrator');
+        Typecho_Plugin::factory('Widget_Comments_Edit')->mark = array('CommentToMail_Plugin', 'eventApproved');
 
+        // 检测当前版本
+        if ( version_compare(str_replace('/', '.', Typecho_Common::VERSION), '1.1.17.10.30') ) {
+            Typecho_Plugin::factory('Widget_Service')->asyncRequest = array('CommentToMail_Plugin', 'asyncRequest');
+        }
+
+        Helper::addAction(self::$action, 'CommentToMail_Action');
+        Helper::addRoute('commentToMailProcessQueue', '/commentToMailProcessQueue/', 'CommentToMail_Action', 'processQueue');
+        Helper::addPanel(1, self::$panel, '评论邮件提醒', '评论邮件提醒控制台', 'administrator');
         return _t('请设置邮箱信息，以使插件正常使用！');
     }
 
@@ -61,7 +72,9 @@ class CommentToMail_Plugin implements Typecho_Plugin_Interface
     public static function deactivate()
     {
         Helper::removeAction(self::$action);
+        Helper::removeRoute('commentToMailProcessQueue');
         Helper::removePanel(1, self::$panel);
+        self::dbUninstall();
     }
 
     /**
@@ -73,6 +86,8 @@ class CommentToMail_Plugin implements Typecho_Plugin_Interface
      */
     public static function config(Typecho_Widget_Helper_Form $form)
     {
+        $options = Typecho_Widget::widget('Widget_Options');
+           echo "<a href='https://www.temdu.com/2018/04/77.html'>请在设置前仔细阅读相关说明</a>";
         $mode= new Typecho_Widget_Helper_Form_Element_Radio('mode',
                 array( 'smtp' => 'smtp',
                        'mail' => 'mail()',
@@ -119,6 +134,7 @@ class CommentToMail_Plugin implements Typecho_Plugin_Interface
         $status = new Typecho_Widget_Helper_Form_Element_Checkbox('status',
                 array('approved' => '提醒已通过评论',
                         'waiting' => '提醒待审核评论',
+                        'adopt' => '提醒评论审核通过',
                         'spam' => '提醒垃圾评论'),
                 array('approved', 'waiting'), '提醒设置',_t('该选项仅针对博主，访客只发送已通过的评论。'));
         $form->addInput($status);
@@ -128,7 +144,7 @@ class CommentToMail_Plugin implements Typecho_Plugin_Interface
                     'to_guest' => '评论被回复时，发邮件通知评论者。',
                     'to_me'=>'自己回复自己的评论时，发邮件通知。(同时针对博主和访客)',
                     'to_log' => '记录邮件发送日志。'),
-                array('to_owner','to_guest'), '其他设置',_t('选中该选项插件会在log/mailer_log.txt 文件中记录发送日志。'));
+                array('to_owner','to_guest'), '其他设置',_t('选中该选项插件会在数据库log中记录发送日志。'));
         $form->addInput($other->multiMode());
 
         $titleForOwner = new Typecho_Widget_Helper_Form_Element_Text('titleForOwner',null,"[{title}] 一文有新的评论",
@@ -138,6 +154,32 @@ class CommentToMail_Plugin implements Typecho_Plugin_Interface
         $titleForGuest = new Typecho_Widget_Helper_Form_Element_Text('titleForGuest',null,"您在 [{title}] 的评论有了回复",
                 _t('访客接收邮件标题'));
         $form->addInput($titleForGuest->addRule('required', _t('访客接收邮件标题 不能为空')));
+
+        $sendmode= new Typecho_Widget_Helper_Form_Element_Radio('sendmode',
+            array( 'asy' => '异步发送',
+                'corn' => '计划任务'),
+            'asy', '调用方式');
+        $form->addInput($sendmode);
+        
+        $entryUrl = ($options->rewrite) ? $options->siteUrl : $options->siteUrl . 'index.php';
+
+        $deliverMailUrl = rtrim($entryUrl, '/') . '/action/' . self::$action . '?do=deliverMail&key=[yourKey]';
+        $key = new Typecho_Widget_Helper_Form_Element_Text('key',null, Typecho_Common::randString(16),
+                _t('key'), _t('执行发送任务地址为（ 请注意：实际地址不包括[ ] ）'.$deliverMailUrl) );
+        $form->addInput($key->addRule('required', _t('key 不能为空.')));
+
+        $nonAuthUrl = rtrim($entryUrl, '/') . '/commentToMailProcessQueue/';
+        $nonAuth = new Typecho_Widget_Helper_Form_Element_Checkbox('verify',
+                array('nonAuth'=>'开启不验证key（仅特殊环境下及调试时使用使用，建议无需求不要勾选，以防被用于恶意消耗服务器资源) '.$nonAuthUrl),
+                array(),'执行验证');
+        $form->addInput($nonAuth);
+
+        $clean_time = new Typecho_Widget_Helper_Form_Element_Select('clean_time',
+                array('no_clean' => '不清理',
+                    'immediate' => '发送成功后立即清理'
+					),
+                'no_clean', _t('清理时间'), _t('已发送邮件数据移除的时间'));
+        $form->addInput($clean_time);
     }
 
     /**
@@ -150,6 +192,76 @@ class CommentToMail_Plugin implements Typecho_Plugin_Interface
     public static function personalConfig(Typecho_Widget_Helper_Form $form)
     {}
 
+	public static function dbInstall()
+	{
+		$installDb = Typecho_Db::get();
+		$type = explode('_', $installDb->getAdapterName());
+		$type = array_pop($type);
+		$prefix = $installDb->getPrefix();
+		$scripts = file_get_contents('usr/plugins/CommentToMail/'.$type.'.sql');
+		$scripts = str_replace('typecho_', $prefix, $scripts);
+		$scripts = str_replace('%charset%', 'utf8', $scripts);
+		$scripts = explode(';', $scripts);
+		try {
+			foreach ($scripts as $script) {
+				$script = trim($script);
+				if ($script) {
+					$installDb->query($script, Typecho_Db::WRITE);
+				}
+			}
+			return '建立邮件队列数据表，插件启用成功';
+		} catch (Typecho_Db_Exception $e) {
+			$code = $e->getCode();
+			if(('Mysql' == $type && 1050 == $code) ||
+					('SQLite' == $type && ('HY000' == $code || 1 == $code))) {
+				try {
+					$script = 'SELECT `id`, `content`, `sent` FROM `' . $prefix . 'mail`';
+					$installDb->query($script, Typecho_Db::READ);
+					return '检测到邮件队列数据表，插件启用成功';					
+				} catch (Typecho_Db_Exception $e) {
+					$code = $e->getCode();
+					if(('Mysql' == $type && 1054 == $code) ||
+							('SQLite' == $type && ('HY000' == $code || 1 == $code))) {
+						return Links_Plugin::linksUpdate($installDb, $type, $prefix);
+					}
+					throw new Typecho_Plugin_Exception('数据表检测失败，插件启用失败。错误号：'.$code);
+				}
+			} else {
+				throw new Typecho_Plugin_Exception('数据表建立失败，插件启用失败。错误号：'.$code);
+			}
+		}
+	}
+
+    /**
+     * 插件禁用删除数据表
+     *
+     * @access public
+     * @param $comment 调用参数
+     * @return void
+     */
+	public static function dbUninstall()
+    {
+        $uninstallDb = Typecho_Db::get();
+        $prefix = $uninstallDb->getPrefix();
+        $uninstallDb->query('drop table '.$prefix.'mail');
+    }
+
+    /**
+     * 通过审核邮件内容
+     *
+     * @access public
+     * @param $comment 调用参数
+     * @return void
+     */
+    public static function eventApproved($comment, $content, $status){
+        self::saveLog(date('Y-m-d H:i:s', time())."测试\r\n");
+        if ( 'approved' == $status ) {
+            $content->status='approved';
+            self::parseComment($content);
+        }
+    }
+
+
     /**
      * 获取邮件内容
      *
@@ -158,8 +270,8 @@ class CommentToMail_Plugin implements Typecho_Plugin_Interface
      * @return void
      */
     public static function parseComment($comment)
-    {        
-        $options           = Typecho_Widget::widget('Widget_Options');
+    {
+        $options = Typecho_Widget::widget('Widget_Options');
         $cfg = array(
             'siteTitle' => $options->title,
             'timezone'  => $options->timezone,
@@ -176,32 +288,38 @@ class CommentToMail_Plugin implements Typecho_Plugin_Interface
             'permalink' => $comment->permalink,
             'status'    => $comment->status,
             'parent'    => $comment->parent,
-            'manage'    => $options->siteUrl . "admin/manage-comments.php"
+            'manage'    => $options->siteUrl . __TYPECHO_ADMIN_DIR__ . "manage-comments.php"
         );
 
         self::$_isMailLog = in_array('to_log', Helper::options()->plugin('CommentToMail')->other) ? true : false;
 
-        //是否接收邮件
-        if (isset($_POST['banmail']) && 'stop' == $_POST['banmail']) {
-            $cfg['banMail'] = 1;
-        } else {
-            $cfg['banMail'] = 0;
-        }
-
-        $fileName = Typecho_Common::randString(7);
+        // 添加至队列
+        self::saveLog("邮件添加至队列\r\n");
         $cfg      = (object)$cfg;
-        file_put_contents(dirname(__FILE__) . '/cache/' . $fileName, serialize($cfg));
-        $url = ($options->rewrite) ? $options->siteUrl : $options->siteUrl . 'index.php';
-        $url = rtrim($url, '/') . '/action/' . self::$action . '?send=' . $fileName;
+        $db = Typecho_Db::get();
+        $prefix = $db->getPrefix();
+        $id = $db->query(
+            $db->insert($prefix.'mail')->rows(array(
+                'content' => base64_encode(serialize($cfg)),
+                'sent' => false
+            ))
+        );
 
-        $date = new Typecho_Date(Typecho_Date::gmtTime());
-        $time = $date->format('Y-m-d H:i:s');
-        
-        self::saveLog("{$time} 开始发送请求：{$url}\n");
-        self::asyncRequest($url);
+        $_cfg = Helper::options()->plugin('CommentToMail');
+        self::saveLog($comment->parent);
+        if($_cfg->sendmode=='asy'){
+            self::saveLog("开始执行异步请求CS\r\n");
+            //http://jb.temdu.com/index.php/action/comment-to-mail?do=deliverMail&DzaDLpImgj1M07B6
+            $url = ($options->rewrite) ? $options->siteUrl : $options->siteUrl . 'index.php';
+            $url = rtrim($url, '/') .  '/action/' . self::$action . '?do=deliverMail&key=' .$_cfg->key;
+            if ( version_compare(str_replace('/', '.', Typecho_Common::VERSION), '1.1.17.10.30') ) {
+                // 调用异步回调模式
+                Helper::requestService('asyncRequest', $url);
+            }else{
+                self::asyncRequest($url);
+            }
+        }
     }
-
-
 
     /**
      * 发送异步请求
@@ -245,12 +363,12 @@ class CommentToMail_Plugin implements Typecho_Plugin_Interface
             return false;
         }
 
-        $out = "POST " . $path . " HTTP/1.1\r\n";
+        $out = "GET " . $path . " HTTP/1.1\r\n";
         $out .= "Host: $host\r\n";
         $out .= "Connection: Close\r\n\r\n";
 
         self::saveLog("Socket 方式发送\r\n");
-
+        self::saveLog("请求链接：$url\r\n");
         fwrite($fp, $out);
         sleep(1);
         fclose($fp);
@@ -275,9 +393,9 @@ class CommentToMail_Plugin implements Typecho_Plugin_Interface
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, TRUE);  // 从证书中检查SSL加密算法是否存在
         curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/536.11 (KHTML, like Gecko) Chrome/20.0.1132.47 Safari/536.11"); //设置浏览器标识
 
-        
+
         self::saveLog("Curl 方式发送\r\n");
-        
+
         self::saveLog("Curl:".curl_exec($ch)."\r\n");
 
         if($errno = curl_errno($ch)) {
@@ -330,6 +448,7 @@ class CommentToMail_Plugin implements Typecho_Plugin_Interface
         return $writeable;
     }
 
+
     /**
      * 写入记录
      * @param $content
@@ -337,9 +456,9 @@ class CommentToMail_Plugin implements Typecho_Plugin_Interface
      */
     public static function saveLog($content)
     {
-        if (!self::$_isMailLog) {
-            return false;
-        }
+        //if (!self::$_isMailLog) {
+         //   return false;
+        //}
 
         file_put_contents(dirname(__FILE__) . '/log/mailer_log.txt', $content, FILE_APPEND);
     }

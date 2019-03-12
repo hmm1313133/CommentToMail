@@ -1,14 +1,10 @@
 Typecho 评论邮件提醒插件
 =============
 访客评论后，将会发送评论内容到您指定的邮箱。
-原作者是[byends](https://github.com/byends/CommentToMail/ "byends") 基于[DEFE](http://defe.me "DEFE")维护的版本。
-
-
-Github地址:https://github.com/hmm1313133/CommentToMail
-下载链接:[点击下载](https://github.com/hmm1313133/CommentToMail/archive/master.zip "点击下载")
+原作者是 byends（https://github.com/byends/CommentToMail/） 基于 DEFE (http://defe.me) 维护的版本。
 基于作者 byends 的2.0.0版本进行维护。
 
-如有bug请评论告知。
+
 ### 使用说明
 1. 下载插件
 2. 将插件上传到 `/usr/plugins/` 这个目录下
@@ -17,6 +13,26 @@ Github地址:https://github.com/hmm1313133/CommentToMail
 5. 设置smtp服务器地址、邮箱地址、密码等信息
 
 ### 升级日志
+
+##### 2.2.0(development) Upgrade at 2018-04-13
+- 添加了版本检测，现在可以自动识别是否启用异步
+- 添加了评论审核通过提醒
+- 准备重构插件代码
+
+##### 2.1.1(development) Upgrade at 2018-04-13
+版本要求：需要 Typecho `1.2 (18.1.29)`
+- 禁用插件时删除数据表
+
+##### 2.1.0(development) Upgrade at 2018-04-13
+版本要求：需要 Typecho `1.2 (18.1.29)`
+注意：需禁用再重新激活插件
+- 基于Uniartisan维护版本添加异步方法，实现网址监控+异步发送共存
+
+##### 2.0.1(development) Upgrade at 2018-04-11
+版本要求：需要 Typecho `1.2 (18.1.29)`
+注意：需禁用再重新激活插件
+- 添加Typecho开发版异步回调方法
+
 
 ##### 2.0.1 Upgrade at 2018-04-11
 - 修改socket 和 curl 方式提交请求为POST方式
