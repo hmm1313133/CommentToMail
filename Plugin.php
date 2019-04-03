@@ -301,7 +301,7 @@ class CommentToMail_Plugin implements Typecho_Plugin_Interface
         $id = $db->query(
             $db->insert($prefix.'mail')->rows(array(
                 'content' => base64_encode(serialize($cfg)),
-                'sent' => false
+                'sent' => 0
             ))
         );
 
