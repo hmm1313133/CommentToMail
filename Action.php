@@ -125,7 +125,7 @@ class CommentToMail_Action extends Typecho_Widget implements Widget_Interface_Do
         $toMe = (in_array('to_me', $this->_cfg->other) && $this->_email->ownerId == $this->_email->authorId) ? true : false;
 
         //向博主发信
-        if (0 == $this->_email->parent && $this->_email->status == 'waiting')
+        if (0 == $this->_email->parent && ($this->_email->status == 'waiting'||$this->_email->status == 'approved'))
         {
                 if(in_array($this->_email->status, $this->_cfg->status) && in_array('to_owner', $this->_cfg->other)
                     && ( $toMe || $this->_email->ownerId != $this->_email->authorId))
@@ -143,33 +143,33 @@ class CommentToMail_Action extends Typecho_Widget implements Widget_Interface_Do
                     $log .= "插件设置为不发送此类邮件或博主拒收邮件!\r\n";
                 }
         }elseif (0 == $this->_email->parent && $this->_email->status == 'approved'){
-            if (in_array('to_guest', $this->_cfg->other)
-                //&& in_array('adopt', $this->_cfg->other)
-                && !$this->ban($this->_email->parent)){
-                //如果联系我的邮件地址为空，则使用文章作者的邮件地址
-                if (empty($this->_email->contactme)) {
-                    if (!isset($user) || !$user) {
-                        Typecho_Widget::widget('Widget_Users_Author@temp' . $this->_email->cid, array('uid' => $this->_email->ownerId))->to($user);
-                    }
-                    $this->_email->contactme = $user->mail;
-                } else {
-                    $this->_email->contactme = $this->_cfg->contactme;
-                }
+            // if (in_array('to_guest', $this->_cfg->other)
+            //     //&& in_array('adopt', $this->_cfg->other)
+            //     && !$this->ban($this->_email->parent)){
+            //     //如果联系我的邮件地址为空，则使用文章作者的邮件地址
+            //     if (empty($this->_cfg->mail)) {
+            //         Typecho_Widget::widget('Widget_Users_Author@temp' . $this->_email->cid, array('uid' => $this->_email->ownerId))->to($user);
+            //         $this->_email->to = $user->mail;
+            //     } else {
+            //         $this->_email->to = $this->_cfg->mail;
+            //     }
+            //     $this->authorMail()->sendMail();
                 /**$original = $this->_db->fetchRow($this->_db->select('author', 'mail', 'text')
                     ->from('table.comments')
                     ->where('coid = ?', $this->_email->parent));**/
-                if (in_array('to_me', $this->_cfg->other)
-                    || $this->_email->mail != $this->_email->mail) {
-                    $this->_email->to             = $this->_email->mail;
-                    $this->_email->originalText   = $this->_email->text;
-                    $this->_email->originalAuthor = $this->_email->author;;
-                    $log .= $this->adoptMail()->sendMail();
-                    $log .= "测试向访客发2信";
-                }
-            }else
-            {
-                $log .= "插件设置为不发送此类邮件或被评论访客拒收邮件!\r\n";
-            }
+                // $log.=$this->_cfg->mail;
+                // if (in_array('to_me', $this->_cfg->other)
+                //     || $this->_email->mail != $this->_email->mail) {
+                //     $this->_email->to             = $this->_email->mail;
+                //     $this->_email->originalText   = $this->_email->text;
+                //     $this->_email->originalAuthor = $this->_email->author;;
+                //     $log .= $this->adoptMail()->sendMail();
+                //     $log .= "测试向访客发2信";
+                // }
+            // }else
+            // {
+            //     $log .= "插件设置为不发送此类邮件或被评论访客拒收邮件!\r\n";
+            // }
         }
 
         //向访客发信
@@ -178,21 +178,23 @@ class CommentToMail_Action extends Typecho_Widget implements Widget_Interface_Do
             && in_array('to_guest', $this->_cfg->other)
             && !$this->ban($this->_email->parent))
             {
-                //如果联系我的邮件地址为空，则使用文章作者的邮件地址
-                if (empty($this->_email->contactme)) {
-                    if (!isset($user) || !$user) {
-                        Typecho_Widget::widget('Widget_Users_Author@temp' . $this->_email->cid, array('uid' => $this->_email->ownerId))->to($user);
-                    }
-                    $this->_email->contactme = $user->mail;
-                } else {
-                    $this->_email->contactme = $this->_cfg->contactme;
-                }
-                $original = $this->_db->fetchRow($this->_db->select('author', 'mail', 'text')
+                
+                $original = $this->_db->fetchRow($this->_db->select('author', 'mail', 'text', 'authorId')
                                                            ->from('table.comments')
                                                            ->where('coid = ?', $this->_email->parent));
+                if ('1' == $original['authorId']){
+                    //如果联系我的邮件地址为空，则使用文章作者的邮件地址
+                    if (empty($this->_cfg->mail)) {
+                            Typecho_Widget::widget('Widget_Users_Author@temp' . $this->_email->cid, array('uid' => $this->_email->ownerId))->to($user);
+                        $this->_email->to = $user->mail;
+                    } else {
+                        $this->_email->to = $this->_cfg->mail;
+                    }
+                }else{
+                    $this->_email->to  = $original['mail'];
+                }
                 if (in_array('to_me', $this->_cfg->other) 
-                    || $this->_email->mail != $original['mail']) {
-                    $this->_email->to             = $original['mail'];
+                    || $this->_email->author != $original['author']) {
                     $this->_email->originalText   = $original['text'];
                     $this->_email->originalAuthor = $original['author'];
                     $this->guestMail()->sendMail();
